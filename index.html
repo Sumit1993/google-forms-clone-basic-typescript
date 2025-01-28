@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Forms Clone</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="form-builder">
+            <h1>Form Builder</h1>
+            <div class="form-controls">
+                <input type="text" id="formTitle" placeholder="Form Title" class="form-title-input">
+                <div class="button-group">
+                    <button onclick="addQuestion('text')">Add Text Question</button>
+                    <button onclick="addQuestion('choice')">Add Multiple Choice</button>
+                    <button onclick="addQuestion('checkbox')">Add Checkbox</button>
+                </div>
+            </div>
+            <div id="questionsContainer" class="questions-container">
+                <!-- Questions will be added here -->
+            </div>
+            <button onclick="previewForm()" class="preview-button">Preview Form</button>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html> 
