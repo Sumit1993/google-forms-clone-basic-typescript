@@ -22,6 +22,8 @@ body {
     float: left;
     width: 33.3333%;
     padding: 0 10px;
+    min-height: 250px;
+    height: 30vh;
 }
 
 /* Remove extra left and right margins, due to padding */
@@ -51,14 +53,16 @@ body {
     padding: 16px;
     text-align: center;
     background-color: #f1f1f1;
+    height: 90%;
 }
 
-.new-form-button {
+.new-form-button, .edit-form-button {
     margin: 20px 0;
+    height: 40px;
 }
 
-.edit-form-button {
-    margin: 20px 0;
+.form-option-buttons {
+    margin: 2px 0;
 }
 
 .form-builder {
@@ -92,7 +96,7 @@ button {
     cursor: pointer;
 }
 
-.question-block {
+.question-block, .response-block {
     background-color: #f8f8f8;
     padding: 15px;
     margin-bottom: 15px;
@@ -159,4 +163,9 @@ button {
 .back-button {
     width: 100%;
     margin-top: 20px;
+}
+
+.text-overflow-hidden {
+    overflow: hidden;
+    text-overflow: ellipsis;
 }

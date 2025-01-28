@@ -12,12 +12,12 @@
 <body>
     <div class="container">
         <div class="form-builder">
-            <h1>
+            <div style="display: flex;margin: 10px 0; gap: 10px;">
                 <button onclick="location.href='/index.html'">
-                    <i class="fa fa-arrow-left"></i>
+                    <i class="fa fa-home fa-lg"></i>
                 </button>
-                Form Builder
-            </h1>
+                <h1>Form Builder</h1>
+            </div>
             <div class="form-controls">
                 <input type="text" id="formTitle" placeholder="Form Title" class="form-title-input"
                     onchange="formTitleChange(this.value)">
@@ -30,7 +30,7 @@
             <div id="questionsContainer" class="questions-container">
                 <!-- Questions will be added here -->
             </div>
-            <button onclick="showForm('preview')" class="preview-button">Preview Form</button>
+            <button onclick="previewForm('')" class="preview-button">Preview Form</button>
         </div>
 
         <div id="formPreview" class="form-preview hidden">
@@ -40,8 +40,11 @@
             </div>
             <button onclick="backToEdit()" class="back-button">Back to Edit</button>
         </div>
-        <button onclick="saveForm()" class="save-button">Save Form</button>
-        <button onclick="publishForm()" class="publish-button">Publish Form</button>
+        
+        <div style="display: flex;margin: 10px 0; gap: 10px;">
+            <button onclick="saveForm()" class="save-button">Save Form</button>
+            <button onclick="publishForm()" class="publish-button">Publish Form</button>
+        </div>
     </div>
     <script> var exports = {}; </script>
     <script src="form.js"></script>

@@ -11,9 +11,17 @@ function init(): void {
         cardColumn.innerHTML = `
             <div class="card">
                 <button class="edit-form-button" onclick="location.href='form/edit-form.html?id=${form.id}'">
-                    <i class="fa fa-edit"></i>
+                    <i class="fa fa-edit fa-lg"></i>
                 </button>
-                <p>${form.title}</p>
+                <p class="text-overflow-hidden">${form.title}</p>
+                <div style="display: flex; flex-direction: column;">
+                    <button class="form-option-buttons" onclick="location.href='form/edit-form.html?id=${form.id}'">
+                        Copy form URL
+                    </button>                
+                    <button class="form-option-buttons" onclick="location.href='form/response-review-form.html?id=${form.id}'">
+                        View responses
+                    </button>
+                </div>
             </div>
         `;
         cardRow.appendChild(cardColumn);
