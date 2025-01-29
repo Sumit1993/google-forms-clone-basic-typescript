@@ -226,12 +226,14 @@ function backToEdit(): void {
 function saveForm(): void {
     const formsKey = 'forms'
     const formsData = localStorage.getItem(formsKey);
-    const forms = JSON.parse(formsData || '[]');
+    const forms: Form[] = JSON.parse(formsData || '[]');
     if (forms && forms.length > 0) {
-        localStorage.setItem(formsKey, JSON.stringify([...forms, form]));
+        const filteredForms = forms.filter(existingForm => existingForm.id !== form.id)
+        localStorage.setItem(formsKey, JSON.stringify([...filteredForms, form]));
     } else {
         localStorage.setItem(formsKey, JSON.stringify([form]));
     }
+    alert('Form save successfully');
 }
 
 function publishForm(): void {

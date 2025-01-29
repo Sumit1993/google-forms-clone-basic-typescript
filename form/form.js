@@ -194,11 +194,13 @@ function saveForm() {
     var formsData = localStorage.getItem(formsKey);
     var forms = JSON.parse(formsData || '[]');
     if (forms && forms.length > 0) {
-        localStorage.setItem(formsKey, JSON.stringify(__spreadArray(__spreadArray([], forms, true), [form], false)));
+        var filteredForms = forms.filter(function (existingForm) { return existingForm.id !== form.id; });
+        localStorage.setItem(formsKey, JSON.stringify(__spreadArray(__spreadArray([], filteredForms, true), [form], false)));
     }
     else {
         localStorage.setItem(formsKey, JSON.stringify([form]));
     }
+    alert('Form save successfully');
 }
 function publishForm() {
     form.published = true;

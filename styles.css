@@ -21,9 +21,9 @@ body {
 .column {
     float: left;
     width: 33.3333%;
-    padding: 0 10px;
-    min-height: 250px;
-    height: 30vh;
+    padding: 10px;
+    min-height: 200px;
+    height: 25vh;
 }
 
 /* Remove extra left and right margins, due to padding */
@@ -54,6 +54,10 @@ body {
     text-align: center;
     background-color: #f1f1f1;
     height: 90%;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    justify-content: space-between;
 }
 
 .new-form-button, .edit-form-button {

@@ -4,7 +4,8 @@ function init(): void {
     const formsKey = 'forms'
     const formsData = localStorage.getItem(formsKey);
     const forms = JSON.parse(formsData || '[]') as Form[];
-    const cardRow = document.getElementById('card-row') as HTMLElement;
+    const unpublishedFormCardRow = document.getElementById('unpublished-form-card-row') as HTMLElement;
+    const publishedFormCardRow = document.getElementById('published-form-card-row') as HTMLElement;
     forms.forEach(form => {
         const cardColumn = document.createElement('div');
         cardColumn.className = 'column';
@@ -15,16 +16,14 @@ function init(): void {
                 </button>
                 <p class="text-overflow-hidden">${form.title}</p>
                 <div style="display: flex; flex-direction: column;">
-                    <button class="form-option-buttons" onclick="location.href='form/edit-form.html?id=${form.id}'">
-                        Copy form URL
-                    </button>                
+                    ${form.published ? `               
                     <button class="form-option-buttons" onclick="location.href='form/response-review-form.html?id=${form.id}'">
                         View responses
-                    </button>
+                    </button>` : ''}
                 </div>
             </div>
         `;
-        cardRow.appendChild(cardColumn);
+        form.published? publishedFormCardRow.appendChild(cardColumn) : unpublishedFormCardRow.appendChild(cardColumn);
     })
 }
 
