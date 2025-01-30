@@ -81,15 +81,30 @@ function generateQuestionHTML(form, mode, responses) {
         form.questions.forEach(function (question, index) {
             var questionBlock = document.createElement('div');
             questionBlock.className = 'question-block';
-            // Question input
-            var questionInput = document.createElement('input');
-            questionInput.type = 'text';
-            questionInput.placeholder = 'Enter your question';
-            questionInput.value = question.label;
-            questionInput.className = 'question-input';
-            questionInput.onchange = function (event) {
-                var target = event.target;
-                form.questions[index].label = target.value;
+            questionBlock.draggable = true;
+            questionBlock.dataset.index = index.toString();
+            // Add drag event listeners
+            questionBlock.addEventListener('dragstart', handleDragStart);
+            questionBlock.addEventListener('dragover', handleDragOver);
+            questionBlock.addEventListener('drop', handleDrop);
+            questionBlock.addEventListener('dragenter', handleDragEnter);
+            questionBlock.addEventListener('dragleave', handleDragLeave);
+            // Add drag handle
+            var dragHandle = document.createElement('div');
+            dragHandle.className = 'drag-handle';
+            dragHandle.innerHTML = '⋮⋮';
+            dragHandle.style.cursor = 'move';
+            dragHandle.style.padding = '5px';
+            questionBlock.appendChild(dragHandle);
+            // Create controls container for delete button and type selector
+            var controlsContainer = document.createElement('div');
+            controlsContainer.className = 'controls-container';
+            // Add delete button
+            var deleteButton = document.createElement('button');
+            deleteButton.textContent = 'Delete';
+            deleteButton.onclick = function () {
+                form.questions.splice(index, 1);
+                generateQuestionHTML(form, 'questions');
             };
             // Question type selector
             var typeSelect = document.createElement('select');
@@ -112,7 +127,20 @@ function generateQuestionHTML(form, mode, responses) {
                 }
                 generateQuestionHTML(form, 'questions');
             };
-            questionBlock.appendChild(typeSelect);
+            // Add controls to container
+            controlsContainer.appendChild(deleteButton);
+            controlsContainer.appendChild(typeSelect);
+            questionBlock.appendChild(controlsContainer);
+            // Question input
+            var questionInput = document.createElement('input');
+            questionInput.type = 'text';
+            questionInput.placeholder = 'Enter your question';
+            questionInput.value = question.label;
+            questionInput.className = 'question-input';
+            questionInput.onchange = function (event) {
+                var target = event.target;
+                form.questions[index].label = target.value;
+            };
             questionBlock.appendChild(questionInput);
             // Options container for choice/checkbox
             if (['choice', 'checkbox'].includes(question.type)) {
@@ -287,7 +315,7 @@ function saveForm() {
 function publishForm() {
     form.published = true;
     saveForm();
-    location.href = "/form?id=".concat(form.id, "&mode=response");
+    location.href = "/form/?id=".concat(form.id, "&mode=response");
 }
 function submitResponse() {
     var _a;
@@ -330,4 +358,47 @@ function submitResponse() {
     else {
         localStorage.setItem(responseKey, JSON.stringify([response]));
     }
+}
+var draggedItem = null;
+function handleDragStart(e) {
+    var target = e.target;
+    draggedItem = target;
+    if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', ''); // Required for Firefox
+    }
+    target.style.opacity = '0.5';
+}
+function handleDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+}
+function handleDragEnter(e) {
+    var _a;
+    var target = e.target;
+    (_a = target.closest('.question-block')) === null || _a === void 0 ? void 0 : _a.classList.add('drag-over');
+}
+function handleDragLeave(e) {
+    var _a;
+    var target = e.target;
+    (_a = target.closest('.question-block')) === null || _a === void 0 ? void 0 : _a.classList.remove('drag-over');
+}
+function handleDrop(e) {
+    e.preventDefault();
+    var target = e.target;
+    var questionBlock = target.closest('.question-block');
+    if (questionBlock && draggedItem && questionBlock !== draggedItem) {
+        var fromIndex = parseInt(draggedItem.dataset.index || '0');
+        var toIndex = parseInt(questionBlock.dataset.index || '0');
+        // Reorder the questions array
+        var movedQuestion = form.questions.splice(fromIndex, 1)[0];
+        form.questions.splice(toIndex, 0, movedQuestion);
+        // Regenerate the HTML to reflect the new order
+        generateQuestionHTML(form, 'questions');
+    }
+    questionBlock === null || questionBlock === void 0 ? void 0 : questionBlock.classList.remove('drag-over');
+    if (draggedItem) {
+        draggedItem.style.opacity = '1';
+    }
+    draggedItem = null;
 }

@@ -76,16 +76,34 @@ function generateQuestionHTML(form: Form, mode: 'questions' | 'preview' | 'respo
         form.questions.forEach((question, index) => {
             const questionBlock = document.createElement('div');
             questionBlock.className = 'question-block';
+            questionBlock.draggable = true;
+            questionBlock.dataset.index = index.toString();
 
-            // Question input
-            const questionInput = document.createElement('input');
-            questionInput.type = 'text';
-            questionInput.placeholder = 'Enter your question';
-            questionInput.value = question.label;
-            questionInput.className = 'question-input';
-            questionInput.onchange = (event) => {
-                const target = event.target as HTMLInputElement;
-                form.questions[index].label = target.value;
+            // Add drag event listeners
+            questionBlock.addEventListener('dragstart', handleDragStart);
+            questionBlock.addEventListener('dragover', handleDragOver);
+            questionBlock.addEventListener('drop', handleDrop);
+            questionBlock.addEventListener('dragenter', handleDragEnter);
+            questionBlock.addEventListener('dragleave', handleDragLeave);
+
+            // Add drag handle
+            const dragHandle = document.createElement('div');
+            dragHandle.className = 'drag-handle';
+            dragHandle.innerHTML = '⋮⋮';
+            dragHandle.style.cursor = 'move';
+            dragHandle.style.padding = '5px';
+            questionBlock.appendChild(dragHandle);
+
+            // Create controls container for delete button and type selector
+            const controlsContainer = document.createElement('div');
+            controlsContainer.className = 'controls-container';
+
+            // Add delete button
+            const deleteButton = document.createElement('button');
+            deleteButton.textContent = 'Delete';
+            deleteButton.onclick = () => {
+                form.questions.splice(index, 1);
+                generateQuestionHTML(form, 'questions');
             };
 
             // Question type selector
@@ -109,7 +127,22 @@ function generateQuestionHTML(form: Form, mode: 'questions' | 'preview' | 'respo
                 generateQuestionHTML(form, 'questions');
             };
 
-            questionBlock.appendChild(typeSelect);
+            // Add controls to container
+            controlsContainer.appendChild(deleteButton);
+            controlsContainer.appendChild(typeSelect);
+            questionBlock.appendChild(controlsContainer);
+
+            // Question input
+            const questionInput = document.createElement('input');
+            questionInput.type = 'text';
+            questionInput.placeholder = 'Enter your question';
+            questionInput.value = question.label;
+            questionInput.className = 'question-input';
+            questionInput.onchange = (event) => {
+                const target = event.target as HTMLInputElement;
+                form.questions[index].label = target.value;
+            };
+
             questionBlock.appendChild(questionInput);
 
             // Options container for choice/checkbox
@@ -306,7 +339,7 @@ function saveForm(): void {
 function publishForm(): void {
     form.published = true;
     saveForm();
-    location.href = `/form?id=${form.id}&mode=response`;
+    location.href = `/form/?id=${form.id}&mode=response`;
 }
 
 function submitResponse(): void {
@@ -353,4 +386,55 @@ function submitResponse(): void {
     } else {
         localStorage.setItem(responseKey, JSON.stringify([response]));
     }
+}
+
+let draggedItem: HTMLElement | null = null;
+
+function handleDragStart(e: DragEvent) {
+    const target = e.target as HTMLElement;
+    draggedItem = target;
+    if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', ''); // Required for Firefox
+    }
+    target.style.opacity = '0.5';
+}
+
+function handleDragOver(e: DragEvent) {
+    e.preventDefault();
+    e.dataTransfer!.dropEffect = 'move';
+}
+
+function handleDragEnter(e: DragEvent) {
+    const target = e.target as HTMLElement;
+    target.closest('.question-block')?.classList.add('drag-over');
+}
+
+function handleDragLeave(e: DragEvent) {
+    const target = e.target as HTMLElement;
+    target.closest('.question-block')?.classList.remove('drag-over');
+}
+
+function handleDrop(e: DragEvent) {
+    e.preventDefault();
+    const target = e.target as HTMLElement;
+    const questionBlock = target.closest('.question-block');
+    
+    if (questionBlock && draggedItem && questionBlock !== draggedItem) {
+        const fromIndex = parseInt(draggedItem.dataset.index || '0');
+        const toIndex = parseInt(questionBlock.dataset.index || '0');
+
+        // Reorder the questions array
+        const [movedQuestion] = form.questions.splice(fromIndex, 1);
+        form.questions.splice(toIndex, 0, movedQuestion);
+
+        // Regenerate the HTML to reflect the new order
+        generateQuestionHTML(form, 'questions');
+    }
+
+    questionBlock?.classList.remove('drag-over');
+    if (draggedItem) {
+        draggedItem.style.opacity = '1';
+    }
+    draggedItem = null;
 }

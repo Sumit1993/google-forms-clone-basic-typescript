@@ -12,7 +12,7 @@ function init(): void {
         cardColumn.className = 'column';
         cardColumn.innerHTML = `
             <div class="card">
-                <button class="edit-form-button" onclick="location.href='form?id=${form.id}&mode=builder'">
+                <button class="edit-form-button" onclick="location.href='form/?id=${form.id}&mode=builder'">
                     <i class="fa fa-edit fa-lg" title="Edit form"></i>
                 </button>
                 <p class="text-overflow-hidden">${form.title}</p>
@@ -21,7 +21,7 @@ function init(): void {
                     <button class="form-option-buttons" onclick="copyResponseUrl('${form.id}')" title="Copy fill response URL">
                         Copy fill response URL
                     </button>               
-                    <button class="form-option-buttons" onclick="location.href='form?id=${form.id}&mode=response-review'" title="View form responses">
+                    <button class="form-option-buttons" onclick="location.href='form/?id=${form.id}&mode=response-review'" title="View form responses">
                         View responses
                     </button>` : ''}
                 </div>
@@ -32,7 +32,7 @@ function init(): void {
 }
 
 function copyResponseUrl(formId: string): void {
-    const url = `${window.location.origin}/form?id=${formId}&mode=response`;
+    const url = `${window.location.origin}/form/?id=${formId}&mode=response`;
     navigator.clipboard.writeText(url)
         .then(() => alert('Response URL copied to clipboard!'))
         .catch(err => console.error('Failed to copy URL:', err));
