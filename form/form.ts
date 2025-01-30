@@ -1,7 +1,6 @@
 import { Form, FormResponse, Question } from "../index";
 
 let form: Form;
-let formResponse: FormResponse;
 
 function findGetParameter() {
     var result = {},
@@ -18,22 +17,27 @@ function findGetParameter() {
 }
 
 function init(): void {
-    const params: { id?: string } = findGetParameter();
-    if (params.id) {
+    const params: { id?: string, mode?: 'builder' | 'response' | 'response-review' } = findGetParameter();
+    
+    const container = document.getElementById(`form-${params.mode || 'builder'}`) as HTMLElement;
+    if (params.id && params.mode) {
         const formsKey = 'forms'
         const formsData = localStorage.getItem(formsKey);
         const forms: Form[] = JSON.parse(formsData || '[]');
         const existingForm = forms.filter(form => form.id === params.id)[0];
         form = existingForm;
-        if (location.pathname === '/form/edit-form.html') {
-            existingForm.questions.forEach(question => generateQuestionHTML(question, true));
-        } else if (location.pathname === '/form/response-form.html') {
+        if (params.mode === "builder") {
+            generateQuestionHTML(existingForm, 'questions')
+            container.classList.remove('hidden');
+        } else if (params.mode === "response") {
             viewForm();
-        } else if (location.pathname === '/form/response-review-form.html') {
+            container.classList.remove('hidden');
+        } else if (params.mode === "response-review") {
             const responseKey = form.id
             const responseData = localStorage.getItem(responseKey);
             const formResponses: FormResponse[] = JSON.parse(responseData || '[]');
             formResponses.forEach((formResponse, index) => viewFormResponses(formResponse.responses, index));
+            container.classList.remove('hidden');
         }
     } else {
         form = {
@@ -42,6 +46,7 @@ function init(): void {
             title: 'Untitled form',
             questions: []
         };
+        container.classList.remove('hidden');
     }
     const formTitleElement = document.getElementById('formTitle') as HTMLInputElement;
     formTitleElement.value = form.title
@@ -59,165 +64,227 @@ function addQuestion(type: 'text' | 'choice' | 'checkbox'): void {
         label: '',
     }
     form.questions.push(questionData);
-    generateQuestionHTML(questionData);
+    generateQuestionHTML(form, 'questions');
 }
 
-function generateQuestionHTML(question: Question, isEditInit?: boolean): void {
-    const questionsContainer = document.getElementById('questionsContainer');
-    const questionBlock = document.createElement('div');
-    questionBlock.className = 'question-block';
-    questionBlock.id = "question-block-" + form.questions.length;
+function generateQuestionHTML(form: Form, mode: 'questions' | 'preview' | 'response' | 'response-review', responses?: string[]): void {
+    const questionsContainer = document.getElementById(`${mode}-container`);
+    if (!questionsContainer) return;
+    if(mode !== 'response-review') questionsContainer.innerHTML = '';
 
-    const questionInput = document.createElement('input');
-    questionInput.type = 'text';
-    questionBlock.id = "question-" + form.questions.length;
-    questionInput.className = 'question-input';
-    questionInput.placeholder = 'Enter your question';
-    questionInput.value = question.label;
-    questionInput.onchange = (event: Event) => {
-        if (event.target) {
-            question.label = (event.target as HTMLInputElement).value
-        }
+    if (mode === 'questions') {
+        form.questions.forEach((question, index) => {
+            const questionBlock = document.createElement('div');
+            questionBlock.className = 'question-block';
+
+            // Question input
+            const questionInput = document.createElement('input');
+            questionInput.type = 'text';
+            questionInput.placeholder = 'Enter your question';
+            questionInput.value = question.label;
+            questionInput.className = 'question-input';
+            questionInput.onchange = (event) => {
+                const target = event.target as HTMLInputElement;
+                form.questions[index].label = target.value;
+            };
+
+            // Question type selector
+            const typeSelect = document.createElement('select');
+            typeSelect.className = 'question-type-select';
+            ['text', 'choice', 'checkbox'].forEach(type => {
+                const option = document.createElement('option');
+                option.value = type;
+                option.textContent = type.charAt(0).toUpperCase() + type.slice(1);
+                option.selected = question.type === type;
+                typeSelect.appendChild(option);
+            });
+            typeSelect.onchange = (event) => {
+                const target = event.target as HTMLSelectElement;
+                form.questions[index].type = target.value as 'text' | 'choice' | 'checkbox';
+                if (['choice', 'checkbox'].includes(target.value)) {
+                    form.questions[index].options = form.questions[index].options || ['Option 1'];
+                } else {
+                    delete form.questions[index].options;
+                }
+                generateQuestionHTML(form, 'questions');
+            };
+
+            questionBlock.appendChild(typeSelect);
+            questionBlock.appendChild(questionInput);
+
+            // Options container for choice/checkbox
+            if (['choice', 'checkbox'].includes(question.type)) {
+                const optionsContainer = document.createElement('div');
+                optionsContainer.className = 'options-container';
+                addOption(optionsContainer, question)
+
+                const addOptionButton = document.createElement('button');
+                addOptionButton.textContent = 'Add Option';
+                addOptionButton.onclick = () => {
+                    question.options = question.options || [];
+                    question.options.push(`Option ${question.options.length + 1}`);
+                    generateQuestionHTML(form, 'questions');
+                };
+                optionsContainer.appendChild(addOptionButton);
+                questionBlock.appendChild(optionsContainer);
+            } else {
+                const questionAnswer = document.createElement('input');
+                questionAnswer.readOnly = true
+                questionAnswer.type = 'text';
+                questionAnswer.className = 'question-answer';
+                questionAnswer.placeholder = 'Enter your answer';
+                questionBlock.appendChild(questionAnswer);
+            }
+
+            questionsContainer.appendChild(questionBlock);
+        });
+    } else {
+        const formElement = document.createElement('form');
+        formElement.id = mode + '-form';
+
+        form.questions.forEach((question, index) => {
+            const questionBlock = document.createElement('div');
+            questionBlock.className = 'question-block';
+
+            const label = document.createElement('label');
+            label.textContent = question.label;
+            questionBlock.appendChild(label);
+
+            switch (question.type) {
+                case 'text':
+                    const input = document.createElement('input');
+                    input.className = 'question-input';
+                    input.type = 'text';
+                    input.name = `question_${index}`;
+                    input.required = true;
+                    if(mode === 'response-review' && responses) {
+                        input.value = responses[index] || '';
+                        input.readOnly = true;
+                    }
+                    questionBlock.appendChild(input);
+                    break;
+
+                case 'choice':
+                    question.options?.forEach((option, optionIndex) => {
+                        const radioDiv = document.createElement('div');
+                        const radio = document.createElement('input');
+                        radio.type = 'radio';
+                        radio.name = `question_${index}`;
+                        radio.value = option;
+                        radio.required = true;
+                        if(mode === 'response-review') {
+                            radio.disabled = true;
+                            radio.checked = option === responses?.[index];
+                        }
+
+                        const optionLabel = document.createElement('label');
+                        optionLabel.textContent = option;
+
+                        radioDiv.appendChild(radio);
+                        radioDiv.appendChild(optionLabel);
+                        questionBlock.appendChild(radioDiv);
+                    });
+                    break;
+
+                case 'checkbox':
+                    question.options?.forEach((option, optionIndex) => {
+                        const checkDiv = document.createElement('div');
+                        const checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.name = `question_${index}`;
+                        checkbox.value = option;
+                        if(mode === 'response-review') {
+                            checkbox.disabled = true;
+                            // Handle array of responses for checkboxes
+                            const responseArray = Array.isArray(responses?.[index]) 
+                                ? responses[index] 
+                                : [];
+                            checkbox.checked = responseArray.includes(option);
+                        }
+
+                        const optionLabel = document.createElement('label');
+                        optionLabel.textContent = option;
+
+                        checkDiv.appendChild(checkbox);
+                        checkDiv.appendChild(optionLabel);
+                        questionBlock.appendChild(checkDiv);
+                    });
+                    break;
+            }
+
+            formElement.appendChild(questionBlock);
+        });
+
+        questionsContainer.appendChild(formElement);
     }
+}
 
-    const removeButton = document.createElement('button');
-    removeButton.textContent = 'Remove';
-    removeButton.className = 'remove-button';
-    removeButton.onclick = () => questionBlock.remove();
+function addOption(container: HTMLDivElement, question: Question): void {
+    question.options?.forEach((option, optionIndex) => {
+        const optionDiv = document.createElement('div');
+        optionDiv.style.display = 'flex';
+        optionDiv.style.gap = '10px';
+        optionDiv.style.marginBottom = '10px';
 
-    questionBlock.appendChild(questionInput);
-    if (question.type === 'choice' || question.type === 'checkbox') {
-        question.options ??= [''];
-        const optionsContainer = document.createElement('div');
-        optionsContainer.className = 'options-container';
-
-        const addOptionButton = document.createElement('button');
-        addOptionButton.textContent = 'Add Option text';
-        addOptionButton.onclick = () => {
-            question.options?.push('');
-            addOption(optionsContainer, question, '');
+        const optionInput = document.createElement('input');
+        optionInput.className = 'option-input';
+        optionInput.type = 'text';
+        optionInput.value = option;
+        optionInput.placeholder = 'Enter option';
+        optionInput.style.flex = '1';
+        optionInput.onchange = (event) => {
+            const target = event.target as HTMLInputElement;
+            if (question.options) {
+                question.options[optionIndex] = target.value;
+            }
         };
 
-        questionBlock.appendChild(optionsContainer);
-        questionBlock.appendChild(addOptionButton);
+        const deleteOption = document.createElement('button');
+        deleteOption.textContent = 'Delete Option';
+        deleteOption.onclick = () => {
+            if (question.options && question.options.length > 1) {
+                question.options.splice(optionIndex, 1);
+                generateQuestionHTML(form, 'questions');
+            }
+        };
 
-        if (isEditInit) {
-            question.options?.forEach(option => {
-                addOption(optionsContainer, question, option);
-            });
-        } else {
-            addOption(optionsContainer, question, '');
-        }
-    } else {
-        const questionAnswer = document.createElement('input');
-        questionAnswer.readOnly = true
-        questionAnswer.type = 'text';
-        questionAnswer.className = 'question-answer';
-        questionAnswer.placeholder = 'Enter your answer';
-        questionBlock.appendChild(questionAnswer);
-    }
-
-    questionBlock.appendChild(removeButton);
-    questionsContainer?.appendChild(questionBlock);
-}
-
-function addOption(container: HTMLDivElement, question: Question, option: string): void {
-    const optionInput = document.createElement('input');
-    optionInput.type = 'text';
-    optionInput.id = "option-" + (question.options?.length - 1);
-    optionInput.className = 'option-input';
-    optionInput.placeholder = 'Enter option';
-    optionInput.value = option;
-    optionInput.onchange = (event: Event) => {
-        if (event.target && question.options) {
-            // @ts-ignore
-            question.options[(event.target as HTMLInputElement).id.replace('option-', '')] = (event.target as HTMLInputElement).value
-        }
-    }
-    container.appendChild(optionInput);
+        optionDiv.appendChild(optionInput);
+        optionDiv.appendChild(deleteOption);
+        container.appendChild(optionDiv);
+    });
 }
 
 function previewForm(): void {
     const formBuilder = document.querySelector('.form-builder') as HTMLElement;
-    const formPreview = document.getElementById('formPreview') as HTMLElement;
-    const previewContainer = document.getElementById('previewContainer') as HTMLElement;
+    const formPreview = document.getElementById('form-preview') as HTMLElement;
+    const previewContainer = document.getElementById('preview-container') as HTMLElement;
     // Generate preview
     previewContainer.innerHTML = `<h1>${form.title}</h1>`;
-    generateFormQuestions(previewContainer);
+    generateQuestionHTML(form, 'preview');
 
     formBuilder.classList.add('hidden');
     formPreview.classList.remove('hidden');
 }
 
 function viewForm(): void {
-    const responseContainer = document.getElementById('responseContainer') as HTMLElement;
+    const responseContainer = document.getElementById('response-container') as HTMLElement;
     // Generate preview
     responseContainer.innerHTML = `<h1>${form.title}</h1>`;
-    generateFormQuestions(responseContainer);
+    generateQuestionHTML(form, 'response');
 }
 
 function viewFormResponses(responses: string[], index: number): void {
-    const responseContainer = document.getElementById('responseContainer') as HTMLElement;
-    
+    const responseContainer = document.getElementById('response-review-container') as HTMLElement;
+
     const formTitleElement = document.createElement('h1');
     formTitleElement.innerHTML = `${form.title} - Response ${index}`;
     responseContainer.appendChild(formTitleElement);
-    generateFormResponses(responseContainer, responses, true);
-}
-
-function generateFormResponses(container: HTMLElement, response?: string[], isResponse?: boolean): void {
-    form.questions.forEach((q, index) => {
-        const questionDiv = document.createElement('div');
-        questionDiv.className = isResponse? 'response-block' : 'question-block';
-
-        questionDiv.innerHTML = `
-            <p>${q.label}</p>
-            ${q.type === 'text'
-                ? `<input type="text" name="question${index}" class="question-input"
-                    value="${isResponse && response?.length ? response[index] : ''}"
-                    ${isResponse ? 'readonly disabled' : ''}>`
-                : q.options?.map(opt => `
-                    <div>
-                        <input type="${q.type === 'choice' ? 'radio' : 'checkbox'}" 
-                               name="question${index}" 
-                               value="${opt}" 
-                               ${isResponse ? 'readonly disabled ' : ''}
-                               ${isResponse && response?.length && response[index] === opt ? 'checked' : ''}>
-                        <label>${opt}</label>
-                    </div>
-                `).join('')}
-        `;
-
-        container.appendChild(questionDiv);
-    });
-}
-
-function generateFormQuestions(container: HTMLElement, response?: string[], isResponse?: boolean): void {
-    form.questions.forEach((q, index) => {
-        const questionDiv = document.createElement('div');
-        questionDiv.className = 'question-block';
-
-        questionDiv.innerHTML = `
-            <p>${q.label}</p>
-            ${q.type === 'text'
-                ? '<input type="text" class="question-input">'
-                : q.options?.map(opt => `
-                    <div>
-                        <input type="${q.type === 'choice' ? 'radio' : 'checkbox'}" 
-                               name="question${index}" 
-                               value="${opt}">
-                        <label>${opt}</label>
-                    </div>
-                `).join('')}
-        `;
-
-        container.appendChild(questionDiv);
-    });
+    generateQuestionHTML(form, 'response-review', responses)
 }
 
 function backToEdit(): void {
     const formBuilder = document.querySelector('.form-builder') as HTMLElement;
-    const formPreview = document.getElementById('formPreview') as HTMLElement;
+    const formPreview = document.getElementById('form-preview') as HTMLElement;
 
     formBuilder.classList.remove('hidden');
     formPreview.classList.add('hidden');
@@ -239,7 +306,7 @@ function saveForm(): void {
 function publishForm(): void {
     form.published = true;
     saveForm();
-    location.href = `/form/response-form.html?id=${form.id}`;
+    location.href = `/form?id=${form.id}&mode=response`;
 }
 
 function submitResponse(): void {
@@ -248,16 +315,37 @@ function submitResponse(): void {
         formId: form.id,
         responses: []
     }
+
+    // Group inputs by question (using name attribute)
+    const questionGroups = new Map<string, HTMLInputElement[]>();
+    
     for (let i = 0; i < document.forms[0].length; i++) {
         const input = document.forms[0][i] as HTMLInputElement;
-        if(input.type == 'text') {
-            response.responses.push(input.value)
+        const name = input.name;
+        if (!questionGroups.has(name)) {
+            questionGroups.set(name, []);
         }
-        if((input.type == 'radio' || input.type == 'checkbox') && input.checked) {
-            response.responses.push(input.value)
-        }
+        questionGroups.get(name)?.push(input);
     }
-    const responseKey = form.id
+
+    // Process each question group
+    questionGroups.forEach((inputs, name) => {
+        const firstInput = inputs[0];
+        
+        if (firstInput.type === 'text') {
+            response.responses.push(firstInput.value || ''); // Empty string if no input
+        }
+        else if (firstInput.type === 'radio') {
+            const checkedRadio = inputs.find(input => input.checked);
+            response.responses.push(checkedRadio ? checkedRadio.value : ''); // Empty string if none selected
+        }
+        else if (firstInput.type === 'checkbox') {
+            const checkedBoxes = inputs.filter(input => input.checked).map(input => input.value);
+            response.responses.push(checkedBoxes.length > 0 ? checkedBoxes : ''); // Empty string if none selected
+        }
+    });
+
+    const responseKey = form.id;
     const responseData = localStorage.getItem(responseKey);
     const responses = JSON.parse(responseData || '[]');
     if (responses && responses.length > 0) {

@@ -116,6 +116,15 @@ button {
     border-radius: 4px;
 }
 
+.question-type-select {
+    width: 30%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    float: right;
+}
+
 .question-answer {
     width: 100%;
     padding: 8px;

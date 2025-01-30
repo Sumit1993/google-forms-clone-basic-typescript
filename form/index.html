@@ -11,7 +11,7 @@
 
 <body>
     <div class="container">
-        <div class="form-builder">
+        <div id='form-builder' class="form-builder hidden">
             <div style="display: flex;margin: 10px 0; gap: 10px;">
                 <button onclick="location.href='/index.html'">
                     <i class="fa fa-home fa-lg"></i>
@@ -27,24 +27,50 @@
                     <button onclick="addQuestion('checkbox')">Add Checkbox</button>
                 </div>
             </div>
-            <div id="questionsContainer" class="questions-container">
+            <div id="questions-container" class="questions-container">
                 <!-- Questions will be added here -->
             </div>
             <button onclick="previewForm('')" class="preview-button">Preview Form</button>
+            
+            <div style="display: flex;margin: 10px 0; gap: 10px;">
+                <button onclick="saveForm()" class="save-button">Save Form</button>
+                <button onclick="publishForm()" class="publish-button">Publish Form</button>
+            </div>
         </div>
 
-        <div id="formPreview" class="form-preview hidden">
+        <div id="form-preview" class="form-preview hidden">
             <h2>Form Preview</h2>
-            <div id="previewContainer">
+            <div id="preview-container">
                 <!-- Preview will be shown here -->
             </div>
             <button onclick="backToEdit()" class="back-button">Back to Edit</button>
         </div>
-        
-        <div style="display: flex;margin: 10px 0; gap: 10px;">
-            <button onclick="saveForm()" class="save-button">Save Form</button>
-            <button onclick="publishForm()" class="publish-button">Publish Form</button>
+
+        <div id="form-response" class="form-response hidden">
+            <div style="display: flex;margin: 10px 0; gap: 10px;">
+                <button onclick="location.href='/index.html'">
+                    <i class="fa fa-home fa-lg"></i>
+                </button>
+                <h1>Form Fill Response</h1>
+            </div>
+            <div id="response-container">
+                <!-- Form will be shown here -->
+            </div>
+            <button onclick="submitResponse()" type="submit" class="back-button">Submit Response</button>
         </div>
+
+        <div id="form-response-review" class="form-response hidden">
+            <div style="display: flex;margin: 10px 0; gap: 10px;">
+                <button onclick="location.href='/index.html'">
+                    <i class="fa fa-home fa-lg"></i>
+                </button>
+                <h1>Form Response</h1>
+            </div>
+            <div id="response-review-container">
+                <!-- Form will be shown here -->
+            </div>
+        </div>
+
     </div>
     <script> var exports = {}; </script>
     <script src="form.js"></script>

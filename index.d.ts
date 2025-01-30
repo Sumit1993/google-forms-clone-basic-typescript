@@ -7,7 +7,7 @@ export interface Question {
 export interface FormResponse {
     id: string;
     formId: string;
-    responses: string[];
+    responses: Array<string | string[]>;
 }
 
 export interface Form {

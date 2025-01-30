@@ -10,7 +10,6 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var form;
-var formResponse;
 function findGetParameter() {
     var result = {}, tmp = [];
     location.search
@@ -25,23 +24,27 @@ function findGetParameter() {
 }
 function init() {
     var params = findGetParameter();
-    if (params.id) {
+    var container = document.getElementById("form-".concat(params.mode || 'builder'));
+    if (params.id && params.mode) {
         var formsKey = 'forms';
         var formsData = localStorage.getItem(formsKey);
         var forms = JSON.parse(formsData || '[]');
         var existingForm = forms.filter(function (form) { return form.id === params.id; })[0];
         form = existingForm;
-        if (location.pathname === '/form/edit-form.html') {
-            existingForm.questions.forEach(function (question) { return generateQuestionHTML(question, true); });
+        if (params.mode === "builder") {
+            generateQuestionHTML(existingForm, 'questions');
+            container.classList.remove('hidden');
         }
-        else if (location.pathname === '/form/response-form.html') {
+        else if (params.mode === "response") {
             viewForm();
+            container.classList.remove('hidden');
         }
-        else if (location.pathname === '/form/response-review-form.html') {
+        else if (params.mode === "response-review") {
             var responseKey = form.id;
             var responseData = localStorage.getItem(responseKey);
             var formResponses = JSON.parse(responseData || '[]');
             formResponses.forEach(function (formResponse, index) { return viewFormResponses(formResponse.responses, index); });
+            container.classList.remove('hidden');
         }
     }
     else {
@@ -51,6 +54,7 @@ function init() {
             title: 'Untitled form',
             questions: []
         };
+        container.classList.remove('hidden');
     }
     var formTitleElement = document.getElementById('formTitle');
     formTitleElement.value = form.title;
@@ -65,127 +69,205 @@ function addQuestion(type) {
         label: '',
     };
     form.questions.push(questionData);
-    generateQuestionHTML(questionData);
+    generateQuestionHTML(form, 'questions');
 }
-function generateQuestionHTML(question, isEditInit) {
-    var _a, _b;
-    var questionsContainer = document.getElementById('questionsContainer');
-    var questionBlock = document.createElement('div');
-    questionBlock.className = 'question-block';
-    questionBlock.id = "question-block-" + form.questions.length;
-    var questionInput = document.createElement('input');
-    questionInput.type = 'text';
-    questionBlock.id = "question-" + form.questions.length;
-    questionInput.className = 'question-input';
-    questionInput.placeholder = 'Enter your question';
-    questionInput.value = question.label;
-    questionInput.onchange = function (event) {
-        if (event.target) {
-            question.label = event.target.value;
-        }
-    };
-    var removeButton = document.createElement('button');
-    removeButton.textContent = 'Remove';
-    removeButton.className = 'remove-button';
-    removeButton.onclick = function () { return questionBlock.remove(); };
-    questionBlock.appendChild(questionInput);
-    if (question.type === 'choice' || question.type === 'checkbox') {
-        (_a = question.options) !== null && _a !== void 0 ? _a : (question.options = ['']);
-        var optionsContainer_1 = document.createElement('div');
-        optionsContainer_1.className = 'options-container';
-        var addOptionButton = document.createElement('button');
-        addOptionButton.textContent = 'Add Option text';
-        addOptionButton.onclick = function () {
-            var _a;
-            (_a = question.options) === null || _a === void 0 ? void 0 : _a.push('');
-            addOption(optionsContainer_1, question, '');
-        };
-        questionBlock.appendChild(optionsContainer_1);
-        questionBlock.appendChild(addOptionButton);
-        if (isEditInit) {
-            (_b = question.options) === null || _b === void 0 ? void 0 : _b.forEach(function (option) {
-                addOption(optionsContainer_1, question, option);
+function generateQuestionHTML(form, mode, responses) {
+    var questionsContainer = document.getElementById("".concat(mode, "-container"));
+    if (!questionsContainer)
+        return;
+    if (mode !== 'response-review')
+        questionsContainer.innerHTML = '';
+    if (mode === 'questions') {
+        form.questions.forEach(function (question, index) {
+            var questionBlock = document.createElement('div');
+            questionBlock.className = 'question-block';
+            // Question input
+            var questionInput = document.createElement('input');
+            questionInput.type = 'text';
+            questionInput.placeholder = 'Enter your question';
+            questionInput.value = question.label;
+            questionInput.className = 'question-input';
+            questionInput.onchange = function (event) {
+                var target = event.target;
+                form.questions[index].label = target.value;
+            };
+            // Question type selector
+            var typeSelect = document.createElement('select');
+            typeSelect.className = 'question-type-select';
+            ['text', 'choice', 'checkbox'].forEach(function (type) {
+                var option = document.createElement('option');
+                option.value = type;
+                option.textContent = type.charAt(0).toUpperCase() + type.slice(1);
+                option.selected = question.type === type;
+                typeSelect.appendChild(option);
             });
-        }
-        else {
-            addOption(optionsContainer_1, question, '');
-        }
+            typeSelect.onchange = function (event) {
+                var target = event.target;
+                form.questions[index].type = target.value;
+                if (['choice', 'checkbox'].includes(target.value)) {
+                    form.questions[index].options = form.questions[index].options || ['Option 1'];
+                }
+                else {
+                    delete form.questions[index].options;
+                }
+                generateQuestionHTML(form, 'questions');
+            };
+            questionBlock.appendChild(typeSelect);
+            questionBlock.appendChild(questionInput);
+            // Options container for choice/checkbox
+            if (['choice', 'checkbox'].includes(question.type)) {
+                var optionsContainer = document.createElement('div');
+                optionsContainer.className = 'options-container';
+                addOption(optionsContainer, question);
+                var addOptionButton = document.createElement('button');
+                addOptionButton.textContent = 'Add Option';
+                addOptionButton.onclick = function () {
+                    question.options = question.options || [];
+                    question.options.push("Option ".concat(question.options.length + 1));
+                    generateQuestionHTML(form, 'questions');
+                };
+                optionsContainer.appendChild(addOptionButton);
+                questionBlock.appendChild(optionsContainer);
+            }
+            else {
+                var questionAnswer = document.createElement('input');
+                questionAnswer.readOnly = true;
+                questionAnswer.type = 'text';
+                questionAnswer.className = 'question-answer';
+                questionAnswer.placeholder = 'Enter your answer';
+                questionBlock.appendChild(questionAnswer);
+            }
+            questionsContainer.appendChild(questionBlock);
+        });
     }
     else {
-        var questionAnswer = document.createElement('input');
-        questionAnswer.readOnly = true;
-        questionAnswer.type = 'text';
-        questionAnswer.className = 'question-answer';
-        questionAnswer.placeholder = 'Enter your answer';
-        questionBlock.appendChild(questionAnswer);
+        var formElement_1 = document.createElement('form');
+        formElement_1.id = mode + '-form';
+        form.questions.forEach(function (question, index) {
+            var _a, _b;
+            var questionBlock = document.createElement('div');
+            questionBlock.className = 'question-block';
+            var label = document.createElement('label');
+            label.textContent = question.label;
+            questionBlock.appendChild(label);
+            switch (question.type) {
+                case 'text':
+                    var input = document.createElement('input');
+                    input.className = 'question-input';
+                    input.type = 'text';
+                    input.name = "question_".concat(index);
+                    input.required = true;
+                    if (mode === 'response-review' && responses) {
+                        input.value = responses[index] || '';
+                        input.readOnly = true;
+                    }
+                    questionBlock.appendChild(input);
+                    break;
+                case 'choice':
+                    (_a = question.options) === null || _a === void 0 ? void 0 : _a.forEach(function (option, optionIndex) {
+                        var radioDiv = document.createElement('div');
+                        var radio = document.createElement('input');
+                        radio.type = 'radio';
+                        radio.name = "question_".concat(index);
+                        radio.value = option;
+                        radio.required = true;
+                        if (mode === 'response-review') {
+                            radio.disabled = true;
+                            radio.checked = option === (responses === null || responses === void 0 ? void 0 : responses[index]);
+                        }
+                        var optionLabel = document.createElement('label');
+                        optionLabel.textContent = option;
+                        radioDiv.appendChild(radio);
+                        radioDiv.appendChild(optionLabel);
+                        questionBlock.appendChild(radioDiv);
+                    });
+                    break;
+                case 'checkbox':
+                    (_b = question.options) === null || _b === void 0 ? void 0 : _b.forEach(function (option, optionIndex) {
+                        var checkDiv = document.createElement('div');
+                        var checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.name = "question_".concat(index);
+                        checkbox.value = option;
+                        if (mode === 'response-review') {
+                            checkbox.disabled = true;
+                            // Handle array of responses for checkboxes
+                            var responseArray = Array.isArray(responses === null || responses === void 0 ? void 0 : responses[index])
+                                ? responses[index]
+                                : [];
+                            checkbox.checked = responseArray.includes(option);
+                        }
+                        var optionLabel = document.createElement('label');
+                        optionLabel.textContent = option;
+                        checkDiv.appendChild(checkbox);
+                        checkDiv.appendChild(optionLabel);
+                        questionBlock.appendChild(checkDiv);
+                    });
+                    break;
+            }
+            formElement_1.appendChild(questionBlock);
+        });
+        questionsContainer.appendChild(formElement_1);
     }
-    questionBlock.appendChild(removeButton);
-    questionsContainer === null || questionsContainer === void 0 ? void 0 : questionsContainer.appendChild(questionBlock);
 }
-function addOption(container, question, option) {
+function addOption(container, question) {
     var _a;
-    var optionInput = document.createElement('input');
-    optionInput.type = 'text';
-    optionInput.id = "option-" + (((_a = question.options) === null || _a === void 0 ? void 0 : _a.length) - 1);
-    optionInput.className = 'option-input';
-    optionInput.placeholder = 'Enter option';
-    optionInput.value = option;
-    optionInput.onchange = function (event) {
-        if (event.target && question.options) {
-            // @ts-ignore
-            question.options[event.target.id.replace('option-', '')] = event.target.value;
-        }
-    };
-    container.appendChild(optionInput);
+    (_a = question.options) === null || _a === void 0 ? void 0 : _a.forEach(function (option, optionIndex) {
+        var optionDiv = document.createElement('div');
+        optionDiv.style.display = 'flex';
+        optionDiv.style.gap = '10px';
+        optionDiv.style.marginBottom = '10px';
+        var optionInput = document.createElement('input');
+        optionInput.className = 'option-input';
+        optionInput.type = 'text';
+        optionInput.value = option;
+        optionInput.placeholder = 'Enter option';
+        optionInput.style.flex = '1';
+        optionInput.onchange = function (event) {
+            var target = event.target;
+            if (question.options) {
+                question.options[optionIndex] = target.value;
+            }
+        };
+        var deleteOption = document.createElement('button');
+        deleteOption.textContent = 'Delete Option';
+        deleteOption.onclick = function () {
+            if (question.options && question.options.length > 1) {
+                question.options.splice(optionIndex, 1);
+                generateQuestionHTML(form, 'questions');
+            }
+        };
+        optionDiv.appendChild(optionInput);
+        optionDiv.appendChild(deleteOption);
+        container.appendChild(optionDiv);
+    });
 }
 function previewForm() {
     var formBuilder = document.querySelector('.form-builder');
-    var formPreview = document.getElementById('formPreview');
-    var previewContainer = document.getElementById('previewContainer');
+    var formPreview = document.getElementById('form-preview');
+    var previewContainer = document.getElementById('preview-container');
     // Generate preview
     previewContainer.innerHTML = "<h1>".concat(form.title, "</h1>");
-    generateFormQuestions(previewContainer);
+    generateQuestionHTML(form, 'preview');
     formBuilder.classList.add('hidden');
     formPreview.classList.remove('hidden');
 }
 function viewForm() {
-    var responseContainer = document.getElementById('responseContainer');
+    var responseContainer = document.getElementById('response-container');
     // Generate preview
     responseContainer.innerHTML = "<h1>".concat(form.title, "</h1>");
-    generateFormQuestions(responseContainer);
+    generateQuestionHTML(form, 'response');
 }
 function viewFormResponses(responses, index) {
-    var responseContainer = document.getElementById('responseContainer');
+    var responseContainer = document.getElementById('response-review-container');
     var formTitleElement = document.createElement('h1');
     formTitleElement.innerHTML = "".concat(form.title, " - Response ").concat(index);
     responseContainer.appendChild(formTitleElement);
-    generateFormResponses(responseContainer, responses, true);
-}
-function generateFormResponses(container, response, isResponse) {
-    form.questions.forEach(function (q, index) {
-        var _a;
-        var questionDiv = document.createElement('div');
-        questionDiv.className = isResponse ? 'response-block' : 'question-block';
-        questionDiv.innerHTML = "\n            <p>".concat(q.label, "</p>\n            ").concat(q.type === 'text'
-            ? "<input type=\"text\" name=\"question".concat(index, "\" class=\"question-input\"\n                    value=\"").concat(isResponse && (response === null || response === void 0 ? void 0 : response.length) ? response[index] : '', "\"\n                    ").concat(isResponse ? 'readonly disabled' : '', ">")
-            : (_a = q.options) === null || _a === void 0 ? void 0 : _a.map(function (opt) { return "\n                    <div>\n                        <input type=\"".concat(q.type === 'choice' ? 'radio' : 'checkbox', "\" \n                               name=\"question").concat(index, "\" \n                               value=\"").concat(opt, "\" \n                               ").concat(isResponse ? 'readonly disabled ' : '', "\n                               ").concat(isResponse && (response === null || response === void 0 ? void 0 : response.length) && response[index] === opt ? 'checked' : '', ">\n                        <label>").concat(opt, "</label>\n                    </div>\n                "); }).join(''), "\n        ");
-        container.appendChild(questionDiv);
-    });
-}
-function generateFormQuestions(container, response, isResponse) {
-    form.questions.forEach(function (q, index) {
-        var _a;
-        var questionDiv = document.createElement('div');
-        questionDiv.className = 'question-block';
-        questionDiv.innerHTML = "\n            <p>".concat(q.label, "</p>\n            ").concat(q.type === 'text'
-            ? '<input type="text" class="question-input">'
-            : (_a = q.options) === null || _a === void 0 ? void 0 : _a.map(function (opt) { return "\n                    <div>\n                        <input type=\"".concat(q.type === 'choice' ? 'radio' : 'checkbox', "\" \n                               name=\"question").concat(index, "\" \n                               value=\"").concat(opt, "\">\n                        <label>").concat(opt, "</label>\n                    </div>\n                "); }).join(''), "\n        ");
-        container.appendChild(questionDiv);
-    });
+    generateQuestionHTML(form, 'response-review', responses);
 }
 function backToEdit() {
     var formBuilder = document.querySelector('.form-builder');
-    var formPreview = document.getElementById('formPreview');
+    var formPreview = document.getElementById('form-preview');
     formBuilder.classList.remove('hidden');
     formPreview.classList.add('hidden');
 }
@@ -205,23 +287,40 @@ function saveForm() {
 function publishForm() {
     form.published = true;
     saveForm();
-    location.href = "/form/response-form.html?id=".concat(form.id);
+    location.href = "/form?id=".concat(form.id, "&mode=response");
 }
 function submitResponse() {
+    var _a;
     var response = {
         id: crypto.randomUUID(),
         formId: form.id,
         responses: []
     };
+    // Group inputs by question (using name attribute)
+    var questionGroups = new Map();
     for (var i = 0; i < document.forms[0].length; i++) {
         var input = document.forms[0][i];
-        if (input.type == 'text') {
-            response.responses.push(input.value);
+        var name_1 = input.name;
+        if (!questionGroups.has(name_1)) {
+            questionGroups.set(name_1, []);
         }
-        if ((input.type == 'radio' || input.type == 'checkbox') && input.checked) {
-            response.responses.push(input.value);
-        }
+        (_a = questionGroups.get(name_1)) === null || _a === void 0 ? void 0 : _a.push(input);
     }
+    // Process each question group
+    questionGroups.forEach(function (inputs, name) {
+        var firstInput = inputs[0];
+        if (firstInput.type === 'text') {
+            response.responses.push(firstInput.value || ''); // Empty string if no input
+        }
+        else if (firstInput.type === 'radio') {
+            var checkedRadio = inputs.find(function (input) { return input.checked; });
+            response.responses.push(checkedRadio ? checkedRadio.value : ''); // Empty string if none selected
+        }
+        else if (firstInput.type === 'checkbox') {
+            var checkedBoxes = inputs.filter(function (input) { return input.checked; }).map(function (input) { return input.value; });
+            response.responses.push(checkedBoxes.length > 0 ? checkedBoxes : ''); // Empty string if none selected
+        }
+    });
     var responseKey = form.id;
     var responseData = localStorage.getItem(responseKey);
     var responses = JSON.parse(responseData || '[]');
